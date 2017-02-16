@@ -2,34 +2,36 @@
 
 const express = require('express');
 const morgan = require('morgan');
-// this will load our .env file if we're
-// running locally. On Gomix, .env files
-// are automatically loaded.
+
 require('dotenv').config();
 
 const {logger} = require('./utilities/logger');
-// these are custom errors we've created
+const {sendEmail} = require('./emailer');
 const {FooError, BarError, BizzError} = require('./errors');
 
 const app = express();
 
-// this route handler randomly throws one of `FooError`,
-// `BarError`, or `BizzError`
 const russianRoulette = (req, res) => {
   const errors = [FooError, BarError, BizzError];
   throw new errors[
     Math.floor(Math.random() * errors.length)]('It blew up!');
 };
 
-
 app.use(morgan('common', {stream: logger.stream}));
-
-// for any GET request, we'll run our `russianRoulette` function
 app.get('*', russianRoulette);
 
-// YOUR MIDDLEWARE FUNCTION should be activated here using
-// `app.use()`. It needs to come BEFORE the `app.use` call
-// below, which sends a 500 and error message to the client
+app.use((err, req, res, next) => { 
+  
+  if(err.name === "FooError" || err.name === "BarError"){
+    sendEmail({text: `There was a ${err.name}: ${err.message}. Error stack: ${err.stack}`,
+               html: `<p>There was a ${err.name}: ${err.message}. Error stack: ${err.stack}</p>`,
+               subject: `A ${err.name} was detected!`});
+    res.send("Email sent! Error type was " + err.name + "... Well done! You broke it!");   
+  }else{
+    res.send("No email to be sent! Error was: " + err.name);
+  }
+  next();
+});
 
 app.use((err, req, res, next) => {
   logger.error(err);
@@ -37,7 +39,6 @@ app.use((err, req, res, next) => {
 });
 
 const port = process.env.PORT || 8080;
-
 const listener = app.listen(port, function () {
   logger.info(`Your app is listening on port ${port}`);
 });
