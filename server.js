@@ -26,9 +26,6 @@ app.use((err, req, res, next) => {
     sendEmail({text: `There was a ${err.name}: ${err.message}. Error stack: ${err.stack}`,
                html: `<p>There was a ${err.name}: ${err.message}. Error stack: ${err.stack}</p>`,
                subject: `A ${err.name} was detected!`});
-    res.send("Email sent! Error type was " + err.name + "... Well done! You broke it!");   
-  }else{
-    res.send("No email to be sent! Error was: " + err.name);
   }
   next();
 });
